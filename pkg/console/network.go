@@ -57,13 +57,32 @@ func applyNetworks(network config.Network, hostname string) ([]byte, error) {
 	// Later, on the hostname page, we can default the hostname field to
 	// the current system hostname.
 
-	dhclientSetHostname := "no"
+	dhclientSetHostname := "yes"
 	if hostname == "" {
 		dhclientSetHostname = "yes"
 	}
-	output, err := exec.Command("sed", "-i",
-		fmt.Sprintf(`s/^DHCLIENT_SET_HOSTNAME=.*/DHCLIENT_SET_HOSTNAME="%s"/`, dhclientSetHostname),
-		"/etc/sysconfig/network/dhcp").CombinedOutput()
+
+	// Expression for DHCLIENT_SET_HOSTNAME
+	setHostnameExpr := fmt.Sprintf(`s/^DHCLIENT_SET_HOSTNAME=.*/DHCLIENT_SET_HOSTNAME="%s"/`, dhclientSetHostname)
+
+	// Build the command arguments
+	args := []string{
+		"-i",                  // In-place editing
+		"-e", setHostnameExpr, // First expression
+	}
+
+	// Only set FQDN enabled when dhclientSetHostname is "yes"
+	if dhclientSetHostname == "yes" {
+		// Expression for DHCLIENT_FQDN_ENABLED
+		fqdnEnabledExpr := `s/^DHCLIENT_FQDN_ENABLED=.*/DHCLIENT_FQDN_ENABLED="enabled"/`
+		args = append(args, "-e", fqdnEnabledExpr)
+	}
+
+	// Add the target file
+	args = append(args, "/etc/sysconfig/network/dhcp")
+
+	cmd := exec.Command("sed", args...)
+	output, err := cmd.CombinedOutput()
 	if err != nil {
 		logrus.Error(err, string(output))
 		return output, err
@@ -73,12 +92,12 @@ func applyNetworks(network config.Network, hostname string) ([]byte, error) {
 		Name: "Network Configuration",
 		Stages: map[string][]yipSchema.Stage{
 			"live": {
-				yipSchema.Stage{Hostname: hostname}, // Ensure hostname updated before configuring network
+				yipSchema.Stage{Hostname: hostname},
 				yipSchema.Stage{},
 			},
 		},
 	}
-	_, err = config.UpdateManagementInterfaceConfig(&conf.Stages["live"][1], network, true)
+	_, err = config.UpdateManagementInterfaceConfig(&conf.Stages["live"][0], network, true)
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +117,7 @@ func applyNetworks(network config.Network, hostname string) ([]byte, error) {
 	}
 	defer os.Remove(tempFile.Name())
 
-	cmd := exec.Command("/usr/bin/yip", "-s", "live", tempFile.Name())
+	cmd = exec.Command("/usr/bin/yip", "-s", "live", tempFile.Name())
 	cmd.Env = os.Environ()
 	bytes, err = cmd.CombinedOutput()
 	if err != nil {

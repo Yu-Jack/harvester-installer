@@ -858,10 +858,10 @@ func addAskCreatePanel(c *Console) error {
 		options := []widgets.Option{
 			{
 				Value: config.ModeCreate,
-				Text:  "Create a new Harvester cluster",
+				Text:  "Create a new Harvester cluster by Jack",
 			}, {
 				Value: config.ModeJoin,
-				Text:  "Join an existing Harvester cluster",
+				Text:  "Join an existing Harvester cluster by Jack",
 			},
 		}
 		installed, err := harvesterInstalled()
