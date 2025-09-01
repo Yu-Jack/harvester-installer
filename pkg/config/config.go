@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/json"
 	"fmt"
 	"net"
 	"runtime"
@@ -217,23 +218,69 @@ type OS struct {
 type ExternalStorageConfig struct {
 	Enabled bool `json:"enabled,omitempty"`
 
-	// Option 1
-	MultiPathConfig []DiskConfig `json:"multiPathConfig,omitempty"`
-
-	// Option 2: More flexible way to configure the multipath.
-	MultiPath MultiPath `json:"multiPath,omitempty"`
+	// Unified multipath configuration that supports both []DiskConfig and MultiPath formats
+	MultiPathConfig interface{} `json:"multiPathConfig,omitempty"`
 }
 
-type MultiPath struct {
-	Blacklist     []DiskConfig `json:"blacklist,omitempty"`
-	BlackListWwid string       `json:"blackListWwid,omitempty"`
-	Exceptions    []DiskConfig `json:"exceptions,omitempty"`
-	ExceptionWwid string       `json:"exceptionWwid,omitempty"`
+// ParseMultiPathConfig parses the MultiPathConfig interface{} into appropriate types
+// Priority: 1. MultiPath struct, 2. []DiskConfig
+func (esc *ExternalStorageConfig) ParseMultiPathConfig() (option MultiPathOption, err error) {
+	if esc.MultiPathConfig == nil {
+		return nil, nil
+	}
+
+	var jsonBytes []byte
+
+	// Check if input is already a JSON string
+	if jsonStr, ok := esc.MultiPathConfig.(string); ok {
+		jsonBytes = []byte(jsonStr)
+	} else {
+		// Convert interface{} to JSON bytes for easier parsing
+		jsonBytes, err = json.Marshal(esc.MultiPathConfig)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal multiPathConfig: %w", err)
+		}
+	}
+
+	mp := &MultiPathOption2{}
+	if err := json.Unmarshal(jsonBytes, mp); err == nil {
+		if mp.Blacklist != nil || mp.BlackListWwid != "" || mp.Exceptions != nil || mp.ExceptionWwid != "" {
+			return mp, nil
+		}
+	}
+
+	var diskConfigs MultipathOption1
+	if err := json.Unmarshal(jsonBytes, &diskConfigs); err == nil {
+		return &diskConfigs, nil
+	}
+
+	return nil, fmt.Errorf("unsupported multiPathConfig format")
+}
+
+type MultiPathOption interface {
+	Render() (string, error)
+}
+
+type MultiPathOption2 struct {
+	Blacklist     []DiskConfig `json:"blacklist,omitempty" yaml:"blacklist,omitempty"`
+	BlackListWwid string       `json:"blackListWwid,omitempty" yaml:"blackListWwid,omitempty"`
+	Exceptions    []DiskConfig `json:"exceptions,omitempty" yaml:"exceptions,omitempty"`
+	ExceptionWwid string       `json:"exceptionWwid,omitempty" yaml:"exceptionWwid,omitempty"`
+}
+
+func (m *MultiPathOption2) Render() (string, error) {
+	return render("multipath.conf.option2.tmpl", m)
+}
+
+type MultipathOption1 []DiskConfig
+
+func (m *MultipathOption1) Render() (string, error) {
+	return render("multipath.conf.option1.tmpl", m)
 }
 
 type DiskConfig struct {
-	Vendor  string `json:"vendor"`
-	Product string `json:"product"`
+	Vendor  string `json:"vendor" yaml:"vendor"`
+	Product string `json:"product" yaml:"product"`
 }
 
 // SSHDConfig is the SSHD configuration for the node
