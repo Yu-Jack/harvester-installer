@@ -13,15 +13,15 @@ then
   VERSION_FILE="version-arm64.yaml"
 fi
 
-source ${SCRIPTS_DIR}/lib/addon
-addons_path=${TOP_DIR}/../addons
-load_and_source_addon ${addons_path} https://github.com/harvester/addons.git main
+# source ${SCRIPTS_DIR}/lib/addon
+# addons_path=${TOP_DIR}/../addons
+# load_and_source_addon ${addons_path} https://github.com/harvester/addons.git main
 
-MONITORING_VERSION=${RANCHER_MONITORING_CHART_VERSION}
-LOGGING_VERSION=${RANCHER_LOGGING_CHART_VERSION}
-echo "Rancher monitoring version: ${MONITORING_VERSION}"
-echo "Rancher logging version: ${LOGGING_VERSION}"
-echo "Harvester eventrouter image tag: ${HARVESTER_EVENTROUTER_FULL_TAG}"
+# MONITORING_VERSION=${RANCHER_MONITORING_CHART_VERSION}
+# LOGGING_VERSION=${RANCHER_LOGGING_CHART_VERSION}
+# echo "Rancher monitoring version: ${MONITORING_VERSION}"
+# echo "Rancher logging version: ${LOGGING_VERSION}"
+# echo "Harvester eventrouter image tag: ${HARVESTER_EVENTROUTER_FULL_TAG}"
 
 mkdir -p ${ARTIFACTS_DIR}
 
