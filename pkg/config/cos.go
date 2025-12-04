@@ -138,8 +138,7 @@ func ConvertToCOS(config *HarvesterConfig) (*yipSchema.YipConfig, error) {
 	}
 
 	afterNetwork := yipSchema.Stage{
-		Hostname: config.OS.Hostname,
-		SSHKeys:  make(map[string][]string),
+		SSHKeys: make(map[string][]string),
 	}
 
 	initramfs.Users[cosLoginUser] = yipSchema.User{
